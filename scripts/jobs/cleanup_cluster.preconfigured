@@ -1,0 +1,13 @@
+#!/bin/bash -ex
+
+dos.py sync
+
+ENV_NAME="${BUILD_USER_ID}-${DEP_NAME}_system_test"
+
+echo "List of ENVs for ${BUILD_USER_ID}"
+
+dos.py list |grep "${BUILD_USER_ID}"
+
+echo "Erasing cluster ${ENV_NAME}"
+
+dos.py erase ${ENV_NAME}

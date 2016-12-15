@@ -1,0 +1,62 @@
+#!/bin/bash
+
+source /home/jenkins/oscc-ci/scripts/helpers.sh
+
+JOB_NAME=${BUILD_USER_ID}-${DEP_NAME}
+ISO_PATH=""
+VENV_PATH_KILO='/home/jenkins/venv-nailgun-tests-2.9'
+VENV_PATH=${VENV_PATH_KILO}
+FUEL_TESTS_PATH_QA='/usr/share/fuel-qa/'
+FUEL_TESTS_PATH=${FUEL_TESTS_PATH_QA}
+
+#check that ALL needed vars are defined
+
+if  [ -z ${NUMBER_CONTROLLERS} ] || [ -z ${NUMBER_COMPUTES} ] || [ -z ${NUMBER_STORAGE} ]; then
+  echo "The following VARS SHOULD be defined:"
+  echo "NUMBER_CONTROLLERS: ${NUMBER_CONTROLLERS}"
+  echo "NUMBER_COMPUTES: ${NUMBER_COMPUTES}"
+  echo "NUMBER_STORAGE: ${NUMBER_STORAGE}"
+  exit 1
+fi
+
+#Check Quotas
+checkQuotas "${BUILD_USER_ID}"
+
+#Check if we have to build env on SSD
+if [[ ${USE_SSD} == 'true' ]]; then
+  export STORAGE_POOL_NAME='ssd'
+fi
+
+#Configure public network
+if [[ ${PUBLIC_NET_ROUTED} == 'true' ]]; then
+  export PUBLIC_FORWARD="route"
+  source /etc/profile.d/fuel-main.sh
+fi
+
+#calculate total nodes count
+export NODES_COUNT=$((1+${NUMBER_CONTROLLERS}+${NUMBER_COMPUTES}+${NUMBER_STORAGE}))
+
+getISO "$ISO_URL"
+
+
+# Build env
+cd ${FUEL_TESTS_PATH}
+
+./utils/jenkins/system_tests.sh -K -t test -w $(pwd) -j ${JOB_NAME} -i $ISO_PATH -o --group=test_custom -V ${VENV_PATH}
+
+#Add public IP to fuel node
+ENV_NAME="${JOB_NAME}_system_test"
+FUEL_ADM_IP=$(virsh net-dumpxml ${ENV_NAME}_admin | grep -P "(\d+\.){3}" -o | awk '{print ""$0"2"}')
+PUB_NET=$(dos.py net-list ${ENV_NAME} |grep "public" |awk '{print $2}')
+PUB_NET_PREFIX=$(dos.py net-list $ENV_NAME |grep "public" | awk '{print $2}' |cut -d "/" -f 2)
+PUB_GATEWAY=$(virsh net-dumpxml ${ENV_NAME}_public | grep -P "(\d+\.){3}(\d+)" -o)
+#Calculate FUEL_PUB_IP - last host in the subnet
+FUEL_PUB_IP=$(ipcalc -b ${PUB_NET} |grep HostMax: | awk '{print $2}')
+
+addPublicToFuel "${FUEL_ADM_IP}" "${FUEL_PUB_IP}" "${PUB_NET_PREFIX}" "${PUB_GATEWAY}"
+
+showEnvInfo "${ENV_NAME}" "${FUEL_PUB_IP}"
+
+#Save artifacts
+cd  ${WORKSPACE}
+echo "FUEL_IP=${FUEL_PUB_IP}" > PARAMS
