@@ -8,11 +8,11 @@ or other application using the libvirt API.
 <domain type='kvm'>
   <name>ps_bm</name>
   <uuid>b998356a-ef38-4af1-bc6f-799e0866a925</uuid>
-  <memory unit='KiB'>1048576</memory>
-  <currentMemory unit='KiB'>1048576</currentMemory>
+  <memory unit='KiB'>524288</memory>
+  <currentMemory unit='KiB'>524288</currentMemory>
   <vcpu placement='static'>2</vcpu>
   <os>
-    <type arch='x86_64' machine='pc-i440fx-2.7'>hvm</type>
+    <type arch='x86_64' machine='pc-i440fx-2.5'>hvm</type>
   </os>
   <features>
     <acpi/>

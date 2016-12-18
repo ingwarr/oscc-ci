@@ -54,7 +54,7 @@ function main {
   bind_resources $LOCK_FILE $ENV_NAME $env_ip
 
   clone_bifrost ${env_ip} $BIFROST_REPO ${BIFROST_BRANCH}
-  
+  local scp_opts='-oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no'
     if [ -z ${hw_enabled} ] 
      then
          PROV_NET="192.168.10"
@@ -66,7 +66,10 @@ function main {
 	 DNSMASQ_ROUTER="192.168.122.1"
          LIBVIRTD_ENABLED=1
          NET_IF="virbr0"
-         execute_ssh_cmd ${env_ip} root r00tme "apt -y install qemu-kvm libvirt-bin; exit"
+         execute_ssh_cmd ${env_ip} root r00tme "apt -y install qemu-kvm libvirt-bin virtinst; exit"
+	 sshpass -p 'r00tme' scp -r ${scp_opts} $HELPERS_DIR/vm/ root@${env_ip}:/opt/stack/
+	 execute_ssh_cmd ${env_ip} root r00tme "cp /opt/stack/vm/ps_bm.xml /etc/libvirt/qemu/ps_bm.xml; cp /opt/stack/pseudo_bm.qcow2 /var/lib/libvirt/images/"
+	 execute_ssh_cmd ${env_ip} root r00tme "virsh define /etc/libvirt/qemu/ps_bm.xml && for ((i=1; i<=3; i++)); do virt-clone -o ps_bm -n ps_bm-$i --auto-clone; done "
   fi
 mkdir -p /tmp/${ENV_NAME}/
   echo "---
@@ -87,7 +90,6 @@ dhcp_pool_end: ${PROV_NET}.50
 dhcp_lease_time: 12h
 dhcp_static_mask: 255.255.255.0" > /tmp/${ENV_NAME}/localhost
 
-  local scp_opts='-oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no'
   sshpass -p 'r00tme'  scp ${scp_opts} /tmp/${ENV_NAME}/localhost root@${env_ip}:/opt/stack/bifrost/playbooks/inventory/group_vars/localhost
   rm -f /tmp/${ENV_NAME}/localhost
 
