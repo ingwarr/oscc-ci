@@ -67,9 +67,8 @@ function main {
          LIBVIRTD_ENABLED=1
          NET_IF="virbr0"
          execute_ssh_cmd ${env_ip} root r00tme "apt -y install qemu-kvm libvirt-bin virtinst; exit"
-	 sshpass -p 'r00tme' scp -r ${scp_opts} $HELPERS_DIR/vm/ps_bm.* root@${env_ip}:/opt/stack/
-	 execute_ssh_cmd ${env_ip} root r00tme "cp /opt/stack/vm/ps_bm.xml /etc/libvirt/qemu/ps_bm.xml; cp /opt/stack/ps_bm.qcow2 /var/lib/libvirt/images/"
-	 execute_ssh_cmd ${env_ip} root r00tme "virsh define /etc/libvirt/qemu/ps_bm.xml && for ((i=1; i<=3; i++)); do virt-clone -o ps_bm -n ps_bm-$i --auto-clone; done "
+	 sshpass -p 'r00tme' scp -r ${scp_opts} $HELPERS_DIR/vm/ps_bm.xml root@${env_ip}:/etc/libvirt/qemu/
+	 execute_ssh_cmd ${env_ip} root r00tme "qemu-img create -f qcow2 /var/lib/libvirt/images/ps_bm.qcow2 15G; virsh define /etc/libvirt/qemu/ps_bm.xml && for ((i=1; i<=3; i++)); do virt-clone -o ps_bm -n ps_bm-$i --auto-clone; done "
   fi
 mkdir -p /tmp/${ENV_NAME}/
   echo "---
